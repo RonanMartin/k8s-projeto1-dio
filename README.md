@@ -40,7 +40,8 @@ The dockerfile will encapsulate in a container the backend files, so run php.
 
 `COPY conexao.php /var/www/html/` To specify the files to be copied to the container
 
-```RUN apt-get update && apt-get install -y \
+```
+RUN apt-get update && apt-get install -y \
 
         libfreetype6-dev \
         libjpeg62-turbo-dev \
@@ -59,7 +60,8 @@ To RUN some important features like mysqli so we can make the connection
 
 In this file will be two environment variables that are important for the connection, which are the _Password_ and the _Name_ of the database:
 
-```FROM mysql:5.7
+```
+FROM mysql:5.7
 
 WORKDIR /var/lib/mysql/
 
