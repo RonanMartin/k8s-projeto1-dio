@@ -27,3 +27,47 @@ table: mensagens
 | nome        | varchar |
 | email       | varchar |
 | comentaraio | varchar |
+
+## **Backend: dockerfile**
+
+The dockerfile will encapsulate in a container the backend files, so run php.
+
+`FROM php:7.4-apache` To upload container image using php as base and also using apache
+
+`WORKDIR /var/www/html` To specify the default folder
+
+`COPY index.php /var/www/html/`
+
+`COPY conexao.php /var/www/html/` To specify the files to be copied to the container
+
+```RUN apt-get update && apt-get install -y \
+
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install mysqli
+```
+
+To RUN some important features like mysqli so we can make the connection
+
+`EXPOSE 80`
+
+## **database: dockerfile**
+
+In this file will be two environment variables that are important for the connection, which are the _Password_ and the _Name_ of the database:
+
+```FROM mysql:5.7
+
+WORKDIR /var/lib/mysql/
+
+ENV MYSQL_ROOT_PASSWORD=Senha123
+
+ENV MYSQL_DATABASE=meubanco
+
+ADD sql.sql /docker-entrypoint-initdb.d
+
+EXPOSE 3306
+```
