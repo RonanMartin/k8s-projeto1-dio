@@ -4,7 +4,7 @@ In the development of this project, the images of the containers and services ne
 
 ## **How it was done?**
 
-The base of the project consists of the ready-made files that we found in the [backend](https://github.com/RonanMartin/k8s-projeto1-dio/tree/main/backend) and [frontend](https://github.com/RonanMartin/k8s-projeto1-dio/tree/main/frontend) folders, minus the dockerfile that we also created.
+The base of the project consists of the ready-made files that we found in the [backend](https://github.com/RonanMartin/k8s-projeto1-dio/tree/main/backend) and [frontend](https://github.com/RonanMartin/k8s-projeto1-dio/tree/main/frontend) folders, minus the dockerfile that we created.
 The database was also created through a dockerfile and was separated inside the [database](https://github.com/RonanMartin/k8s-projeto1-dio/tree/main/database) folder. For this, later we will see the information that will be necessary for sql.
 
 Outside the folders we have the following files:
@@ -106,12 +106,145 @@ Now we need to think about what we need to have the cluster running. We have to 
 
 `kubectl apply -f ./services.yml`
 
-`kubectl apply -f ./deployment.yml` But we still doesn't have the files, so let's go to them
+`kubectl apply -f ./deployment.yml` But we still don't have the files, because first we need to understand some concepts. Later we will see the YML files.
 
-## **Deployment.yml**
+## **Data Persistence in Kubernetes Clusters**
 
 ### PV and PVC
 
 Data persistence is all about storage management. When we upload a Pod to the database, we need the data to be saved elsewhere, so that if the Pod falls, we don't lose the data.
 PersistentVolume (PV) will indicate where is the data volume in which we will save the information. This PV is usually created by the Cluster administrator.
 For a Pod to be able to use PersistentVolume, we need to create a PersistentVolumeClaim (PVC) to bind to the PV. The PVC will be the Pod's request, or deployment, to a given PV, indicating information such as size and specific access mode to this PV.
+
+Important: There are 3 standard means of access, they are:
+
+**ReadWriteOnce:** The volume can be mounted read-write by a single node. Only Pods present on the node can write and read volume information.
+**ReadOnlyMany:** The volume can be mounted read-only by many nodes.
+**ReadWriteMany:** The volume can be mounted read-write by many nodes. However, this format is not accepted by the Compute Engine of GCP, so for the ReadWriteMany case we have to have an external NFS server.
+
+## **Deployment.yml**
+
+This deployment must have persistent data, so we will use de GPC (Google Cloud Platform) Storage Class, and because of that it will not be necessary to create a PV first.
+
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-dados
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard-rwo
+```
+
+In the database specs, the image must match the image we are building for the database.
+If the persistent volume already has data, there may be a conflict when uploading it. To avoid this, we add the following argument `- "--ignore-db-dir=lost+found"` to ignore the **lost+found** directory if there is anything there. This way it will go up normally without problems.
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - image: ronanmartin/projeto-database:1.0
+        args:
+        - "--ignore-db-dir=lost+found"
+        imagePullPolicy: Always
+        name: mysql
+        ports:
+        - containerPort: 3306
+          name: mysql
+
+        volumeMounts:
+        - name: mysql-dados
+          mountPath: /var/lib/mysql/
+      volumes:
+      - name: mysql-dados
+        persistentVolumeClaim:
+          claimName: mysql-dados
+```
+
+`imagePullPolicy: Always` It is important that always download the image again when the deploy is executed.
+`mountPath: /var/lib/mysql/` Here is the local where the datas will be mounted.
+`- name: mysql-dados` It is also important that we provide the correct persistent volume name.
+
+After that, we arrive at the last part of our deployment, the backend part, where in this case we will generate 6 replicas. It is important to remember that the name must correspond to the name of the image that will be used in the background.
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php
+  labels:
+    app: php
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: php
+  template:
+    metadata:
+      labels:
+        app: php
+    spec:
+      containers:
+      - name: php
+        image: ronanmartin/projeto-backend:1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+```
+
+## **Services.yml**
+
+Now we need to create the database connection services so that our backend can communicate with the database, and we need a Load Balace. As we are going to connect the load balancer with our backend, let's do this on port 80.
+
+And we need to create the database connection. Note that we are giving the connection name as `name: mysql-connection`, the same name we put in our backend **conexao.php** as servername. Also take care of the application name which must match the application name we have in our deployment.yml file.
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: php
+spec:
+  selector:
+    app: php
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-connection
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+  clusterIP: None
+```
+
+Now all that we need to do is run the script.
+
+`.\script.bat` So initially it will generate the images, then it will **push** the images, then it will apply the deploy, then the services. You can follow through the log.
+
+`kubectl.exe get services` To verify that the services have been activated correctly.
+
+`kubectl.exe get pod` To check if the pods are running.
+
+And finally, checking the services, get the IP and insert it in the javascript file (js.js), in the field `url: " ",`. Ready our application is running, ready to receive and archive the messages in the database!
