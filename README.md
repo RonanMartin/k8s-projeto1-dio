@@ -56,9 +56,9 @@ To RUN some important features like mysqli so we can make the connection
 
 `EXPOSE 80`
 
-## **database: dockerfile**
+## **Database: dockerfile**
 
-In this file will be two environment variables that are important for the connection, which are the _Password_ and the _Name_ of the database:
+In this file will be two environment variables that are important for the connection, which are the **Password** and the **Name** of the database:
 
 ```
 FROM mysql:5.7
