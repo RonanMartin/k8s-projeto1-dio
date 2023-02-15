@@ -1,17 +1,17 @@
-echo "Criando as imagens..."
+echo "Creating the images..."
 
 docker build -t ronanmartin/projeto-backend:1.0 backend/.
 docker build -t ronanmartin/projeto-database:1.0 database/.
 
-echo "Realizando o push das imagens..."
+echo "Pushing the images..."
 
 docker push ronanmartin/projeto-backend:1.0
 docker push ronanmartin/projeto-database:1.0
 
-echo "Criando servicos no Cluster Kubernetes..."
+echo "Creating services in the Kubernetes Cluster..."
 
 kubectl apply -f ./services.yml
 
-echo "Criando os deployments..."
+echo "Creating the deployments..."
 
 kubectl apply -f ./deployment.yml

@@ -19,8 +19,9 @@ The frontend will be outside the cluster and the backend will be inside the clus
 
 ### **Database**
 
-database: meubanco
-table: mensagens
+**database**: meubanco
+
+**table**: mensagens
 
 | id          | int     |
 | ----------- | ------- |
@@ -73,3 +74,44 @@ ADD sql.sql /docker-entrypoint-initdb.d
 
 EXPOSE 3306
 ```
+
+As per the **ADD** above, we need to create the `sql.sql` file. As our example, very simple:
+
+```
+CREATE TABLE mensagens (
+    id int,
+    nome varchar(50),
+    email varchar(50),
+    comentario varchar (100)
+);
+```
+
+From this moment we already have the complete images, and we can run `docker build` and `docker push`. However, let's create a script so that all files are executed at the same time. **Advantage:** If we got something wrong, we can just change the code and run again.
+
+## **Script**
+
+For **Windows** the script must have the `.bat` extension, and for **Linux** it must have the `.sh` extension
+
+Instead of running command by command in the terminal, we'll put the commands in the script
+
+`docker build -t ronanmartin/projeto-backend:1.0 backend/.` Here we describe the address where the image is on docker hub
+
+`docker build -t ronanmartin/projeto-database:1.0 database/.` This one is inside the database folder
+
+`docker push ronanmartin/projeto-backend:1.0`
+
+`docker push ronanmartin/projeto-database:1.0` To push the images
+
+Now we need to think about what we need to have the cluster running. We have to go up the deployments and also the services.
+
+`kubectl apply -f ./services.yml`
+
+`kubectl apply -f ./deployment.yml` But we still doesn't have the files, so let's go to them
+
+## **Deployment.yml**
+
+### PV and PVC
+
+Data persistence is all about storage management. When we upload a Pod to the database, we need the data to be saved elsewhere, so that if the Pod falls, we don't lose the data.
+PersistentVolume (PV) will indicate where is the data volume in which we will save the information. This PV is usually created by the Cluster administrator.
+For a Pod to be able to use PersistentVolume, we need to create a PersistentVolumeClaim (PVC) to bind to the PV. The PVC will be the Pod's request, or deployment, to a given PV, indicating information such as size and specific access mode to this PV.
